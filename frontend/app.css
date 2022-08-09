@@ -1,0 +1,66 @@
+/* Minimal CSS to demonstrate functionality - not trying to recreate design pixel perfect */
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.discussion {
+    width: 70%;
+    margin: auto;
+}
+
+/* Inputs */
+
+input.body {
+    border-width: 1px;
+    border-radius: 5px;
+    margin: 5px;
+    font-size: 16px;
+    padding: 8px 14px 8px 14px;
+    border-color:#f2f2f2;
+    border-style:solid;
+}
+
+input.body:focus {
+    border-color:#8f8f8f;
+    outline:none;
+}
+
+input.post {
+    background-color: rgb(121, 76, 239);
+    padding: 10px 14px 10px 14px;
+    border: 0;
+    margin: 5px;
+    font-weight: bold;
+    color: white;
+    font-size: 13px;
+    border-radius: 5px;
+}
+
+input.post:hover {
+    background-color: rgb(157, 126, 236);
+    cursor: pointer;
+}
+
+/* Comment threads */
+
+.comment {
+    margin-top: 20px;
+}
+
+.comment .title .from {
+    padding: 10px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.comment .title .created {
+    margin-left: 10px;
+    font-size: 14px;
+    color: rgb(56, 56, 56)
+}
+
+.comment .body {
+    padding: 10px;
+    font-size: 14px;
+}
