@@ -112,7 +112,8 @@ class Comment extends React.Component {
     return (
       <div className="comment">
         <div className="title">
-          <span className="from">{this.props.from}</span>
+          <img className="thumbnail" src={this.props.from.thumbnail} />
+          <span className="from">{this.props.from.name}</span>
           <span className="created">{getTimeFromNow(this.props.created)}</span>
         </div>
         <div className="body">{this.props.body}</div>
@@ -128,10 +129,16 @@ class App extends React.Component {
     super(props);
     this.state = {
       comments: [],
-      currentUsername: generateRandomUsername(),
+      currentUser: {},
       // List of comments ids that are displaying a reply input box
       showReplyInput: [],
     };
+
+    generateRandomUser().then((currentUser) => {
+      this.setState(() => ({
+        currentUser,
+      }));
+    });
 
     /**
      * Using a basic state architecture that reduces a stream of events into comments
@@ -150,14 +157,14 @@ class App extends React.Component {
   handleAddUpvote(commentId) {
     this.storage.addEvent({
       eventType: "addCommentUpvote",
-      data: { from: this.state.currentUsername, commentId },
+      data: { fromUsername: this.state.currentUser.username, commentId },
     });
   }
 
   handleRemoveUpvote(commentId) {
     this.storage.addEvent({
       eventType: "removeCommentUpvote",
-      data: { from: this.state.currentUsername, commentId },
+      data: { fromUsername: this.state.currentUser.username, commentId },
     });
   }
 
@@ -206,7 +213,7 @@ class App extends React.Component {
                     <span>
                       <UpvoteButton
                         isUpvotedByCurrentUser={reply.upvotes.has(
-                          this.state.currentUsername
+                          this.state.currentUser.username
                         )}
                         upvoteCount={reply.upvotes.size}
                         handleAddUpvote={() =>
@@ -235,7 +242,7 @@ class App extends React.Component {
               <span>
                 <UpvoteButton
                   isUpvotedByCurrentUser={comment.upvotes.has(
-                    this.state.currentUsername
+                    this.state.currentUser.username
                   )}
                   upvoteCount={comment.upvotes.size}
                   handleAddUpvote={() => this.handleAddUpvote(comment.eventId)}
@@ -254,7 +261,7 @@ class App extends React.Component {
           >
             {showReplyBox ? (
               <CommentForm
-                from={this.state.currentUsername}
+                from={this.state.currentUser}
                 parentCommentId={comment.eventId}
                 placeholder="How will you reply?"
                 buttonText="Reply"
@@ -268,11 +275,15 @@ class App extends React.Component {
 
     return (
       <div>
-        <CommentForm
-          from={this.state.currentUsername}
-          placeholder="What are your thoughts?"
-          buttonText="Comment"
-        />
+        <h1>Discussion</h1>
+        <div className="primary">
+          <img className="thumbnail" src={this.state.currentUser.thumbnail} />
+          <CommentForm
+            from={this.state.currentUser}
+            placeholder="What are your thoughts?"
+            buttonText="Comment"
+          />
+        </div>
         {comments}
       </div>
     );
@@ -288,8 +299,12 @@ ReactDOM.createRoot(document.getElementById("discussion")).render(<App />);
  * **********************************************************************
  */
 
-function generateRandomUsername() {
-  return `user-${Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)}`;
+async function generateRandomUser() {
+  return fetch("/whoami", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }).then((response) => response.json());
 }
 
 /**
@@ -354,19 +369,19 @@ function reduceEvents(accumComments, event) {
     });
   }
 
-  function addCommentUpvote({ data: { from, commentId } }) {
+  function addCommentUpvote({ data: { fromUsername, commentId } }) {
     accumComments
       .filter((comment) => comment.eventId === commentId)
       .forEach((comment) => {
-        comment.upvotes.add(from);
+        comment.upvotes.add(fromUsername);
       });
   }
 
-  function removeCommentUpvote({ data: { from, commentId } }) {
+  function removeCommentUpvote({ data: { fromUsername, commentId } }) {
     accumComments
       .filter((comment) => comment.eventId === commentId)
       .forEach((comment) => {
-        comment.upvotes.delete(from);
+        comment.upvotes.delete(fromUsername);
       });
   }
 }
