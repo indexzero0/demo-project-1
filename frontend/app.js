@@ -1,25 +1,178 @@
 "use strict";
 
-const username = generateRandomUsername();
-const remoteStorage = storage();
+/**
+ * **********************************************************************
+ * Boundary around react components
+ *
+ * In a non-demo/prod world I'd put these in separate modules/files and do
+ * prereading of react standards and best practices (as I haven't used ReactJS
+ * in prod before) but for the sake of a simple demo and being concious of my
+ * time, I'm keeping them together in one file
+ * **********************************************************************
+ */
 
 /**
- * Using a basic state architecture that reduces a stream of events into comments
- * and then renders them into dom elements. Maybe a framework like redux (never
- * used it personally) would be better in prod but again maybe its also
- * overkill. Maybe even better to reduce on the server side...?
+ * "Smart" component that manages its own state and sends comments/likes to
+ * server
+ *
+ * Maybe in non-demo world this would be better as a "Dumb" component and
+ * we leave the top level app/discussion component to manage state...?
+ * Needs some thought at least...
  */
-(() => {
-  let currentComments = [];
-  remoteStorage.subscribe((events) => {
-    currentComments = events.reduce(reduceEvents, [...currentComments]);
-    rerenderComments(currentComments);
-  });
-})();
+class CommentForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { value: "", isAddingComment: false };
 
-document
-  .getElementById("addComment")
-  .addEventListener("submit", createAddCommentHandler());
+    this.storage = storage();
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(event) {
+    this.setState({ value: event.target.value });
+  }
+
+  handleSubmit(event) {
+    // We don't want to actually submit the form (i.e., refresh the page)
+    event.preventDefault();
+
+    if (this.state.value) {
+      this.setState({ isAddingComment: true });
+      this.storage
+        .addEvent({
+          eventType: "addComment",
+          data: { from: this.props.from, body: this.state.value },
+        })
+        .then(() => this.setState({ value: "" }))
+        .finally(() => this.setState({ isAddingComment: false }));
+    }
+  }
+
+  render() {
+    // We don't want to double submit so disable if waiting for add to finish
+    return (
+      <form onSubmit={this.handleSubmit}>
+        <fieldset disabled={this.state.isAddingComment}>
+          <input
+            type="text"
+            placeholder="What are your thoughts?"
+            className="body"
+            value={this.state.value}
+            onChange={this.handleChange}
+          />
+          <input className="post" type="submit" value="Comment" />
+        </fieldset>
+      </form>
+    );
+  }
+}
+
+// "Dumb" component for representing upvote/like button
+class UpvoteButton extends React.Component {
+  render() {
+    return (
+      <input
+        className="upvote"
+        type="button"
+        value={`${this.props.isUpvotedByCurrentUser ? "▼ Undo" : "▲ Upvote"} (${
+          this.props.upvoteCount
+        })`}
+        onClick={() =>
+          this.props.isUpvotedByCurrentUser
+            ? this.props.handleRemoveUpvote()
+            : this.props.handleAddUpvote()
+        }
+      />
+    );
+  }
+}
+
+// "Dumb" component for representing rendered comments in a discussion
+class Comment extends React.Component {
+  render() {
+    return (
+      <div className="comment">
+        <div className="title">
+          <span className="from">{this.props.from}</span>
+          <span className="created">{getTimeFromNow(this.props.created)}</span>
+        </div>
+        <div className="body">{this.props.body}</div>
+        <div className="toolbar">{this.props.toolbar}</div>
+        {this.props.children}
+      </div>
+    );
+  }
+}
+
+class App extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { comments: [], currentUsername: generateRandomUsername() };
+
+    /**
+     * Using a basic state architecture that reduces a stream of events into comments
+     * and then renders them into dom elements. Maybe a framework like redux (never
+     * used it personally) would be better in prod but again maybe its also
+     * overkill. Maybe even better to reduce on the server side...?
+     */
+    this.storage = storage();
+    this.storage.subscribe((events) =>
+      this.setState((state, _props) => ({
+        comments: events.reduce(reduceEvents, [...state.comments]),
+      }))
+    );
+  }
+
+  handleAddUpvote(commentId) {
+    this.storage.addEvent({
+      eventType: "addCommentUpvote",
+      data: { from: this.state.currentUsername, commentId },
+    });
+  }
+
+  handleRemoveUpvote(commentId) {
+    this.storage.addEvent({
+      eventType: "removeCommentUpvote",
+      data: { from: this.state.currentUsername, commentId },
+    });
+  }
+
+  render() {
+    const comments = this.state.comments.reduce((accumComments, comment) => {
+      return [
+        <Comment
+          key={comment.eventId}
+          body={comment.body}
+          from={comment.from}
+          created={comment.eventDateCreated}
+          upvotes={comment.upvotes}
+          toolbar={
+            <UpvoteButton
+              isUpvotedByCurrentUser={comment.upvotes.has(
+                this.state.currentUsername
+              )}
+              upvoteCount={comment.upvotes.size}
+              handleAddUpvote={() => this.handleAddUpvote(comment.eventId)}
+              handleRemoveUpvote={() =>
+                this.handleRemoveUpvote(comment.eventId)
+              }
+            />
+          }
+        />,
+        ...accumComments,
+      ];
+    }, []);
+    return (
+      <div>
+        <CommentForm from={this.state.currentUsername} />
+        {comments}
+      </div>
+    );
+  }
+}
+
+ReactDOM.createRoot(document.getElementById("discussion")).render(<App />);
 
 /**
  * **********************************************************************
@@ -27,32 +180,6 @@ document
  * individual testable modules/files.
  * **********************************************************************
  */
-
-function createAddCommentHandler() {
-  let isAddingComment = false;
-  return (event) => {
-    // We don't want to actually submit the form (i.e., refresh the page)
-    event.preventDefault();
-
-    // We don't want to double submit so noop if waiting for add to finish
-    if (isAddingComment) {
-      return;
-    }
-
-    const bodyElem = document.getElementById("body");
-    const bodyValue = bodyElem.value.trim();
-    if (bodyValue) {
-      isAddingComment = true;
-      remoteStorage
-        .addEvent({
-          eventType: "addComment",
-          data: { from: username, bodyValue },
-        })
-        .then(() => (bodyElem.value = ""))
-        .finally(() => (isAddingComment = false));
-    }
-  };
-}
 
 function generateRandomUsername() {
   return `user-${Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)}`;
@@ -129,67 +256,6 @@ function reduceEvents(accumComments, event) {
       .forEach((comment) => {
         comment.upvotes.delete(from);
       });
-  }
-}
-
-function rerenderComments(comments) {
-  for (let comment of comments) {
-    let commentElem =
-      document.getElementById(`comment-${comment.eventId}`) ||
-      createCommentElement(comment);
-
-    /**
-     * New dom elements are only created for new comments so anything dynamic
-     * after comment creation (e.g., upvotes and time ago) needs to be
-     * dynamically updated on each render
-     */
-    commentElem.querySelector(".upvotes").value = `${
-      comment.upvotes.has(username) ? "Undo" : "Upvote"
-    } (${comment.upvotes.size})`;
-
-    commentElem.querySelector(".created").textContent = `${getTimeFromNow(
-      comment.eventDateCreated
-    )}`;
-  }
-
-  function createCommentElement({ eventId, from, body, upvotes }) {
-    const commentElem = document.createElement("div");
-    commentElem.setAttribute("class", "comment");
-    commentElem.setAttribute("id", `comment-${eventId}`);
-
-    const titleElem = document.createElement("div");
-    titleElem.setAttribute("class", "title");
-    commentElem.appendChild(titleElem);
-
-    const fromElem = document.createElement("span");
-    fromElem.setAttribute("class", "from");
-    fromElem.textContent = from;
-    titleElem.appendChild(fromElem);
-
-    const createdElem = document.createElement("span");
-    createdElem.setAttribute("class", "created");
-    titleElem.appendChild(createdElem);
-
-    const bodyElem = document.createElement("div");
-    bodyElem.setAttribute("class", "body");
-    bodyElem.textContent = body;
-    commentElem.appendChild(bodyElem);
-
-    const upvoteButton = document.createElement("input");
-    upvoteButton.setAttribute("type", "button");
-    upvoteButton.setAttribute("class", "upvotes");
-    upvoteButton.addEventListener("click", () => {
-      remoteStorage.addEvent({
-        eventType: upvotes.has(username)
-          ? "removeCommentUpvote"
-          : "addCommentUpvote",
-        data: { from: username, commentId: eventId },
-      });
-    });
-    commentElem.appendChild(upvoteButton);
-
-    document.getElementById("comments").prepend(commentElem);
-    return commentElem;
   }
 }
 

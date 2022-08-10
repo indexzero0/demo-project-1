@@ -3,16 +3,18 @@
     <head>
         <title>Discussion</title>
         <link rel="stylesheet" href="app.css"></link>
-        <script src="app.js" async></script>
+
+        <!-- Not for production use - just developer/debugging/demo purposes -->
+        <!-- Would otherwise hook up transpiling as part of a build process -->
+        <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+        <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+        <script src="app.js" type="text/babel" async></script>
+
     </head>
     <body>
         <h1>Discussion</h1>
-        <div class="discussion">
-            <form id="addComment">
-                <input type="text" placeholder="What are your thoughts?" id="body" class="body" />
-                <input class="post" type="submit" value="Comment" />
-            </form>
-            <div id="comments"></div>
-        </div>
+        <div id="discussion" class="discussion"></div>
     </body>
 </html>

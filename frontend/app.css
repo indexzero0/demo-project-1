@@ -11,6 +11,11 @@ body {
 
 /* Inputs */
 
+fieldset {
+    border: 0;
+    margin:0; padding:0;
+}
+
 input.body {
     border-width: 1px;
     border-radius: 5px;
@@ -42,6 +47,22 @@ input.post:hover {
     cursor: pointer;
 }
 
+input.upvote {
+    background-color: white;
+    padding: 10px 14px 10px 14px;
+    border: 0;
+    margin: 5px;
+    font-weight: bold;
+    font-size: 13px;
+    border-radius: 5px;
+}
+
+input.upvote:hover {
+    background-color: #f2f2f2;
+    cursor: pointer;
+}
+
+
 /* Comment threads */
 
 .comment {
@@ -64,3 +85,4 @@ input.post:hover {
     padding: 10px;
     font-size: 14px;
 }
+
