@@ -13,8 +13,8 @@
     "sinon": "14.0.0"
   },
   "scripts": {
-      "start": "node ./backend/server.js",
-      "test": "mocha --exit **/*.test.js"
+    "start": "node ./backend/server.js",
+    "test": "mocha --exit **/*.test.js"
   },
   "private": true
 }
