@@ -59,31 +59,36 @@ function generateRandomUsername() {
 }
 
 /**
- * Currently this is just a local in-memory implementation of a storage backend.
- * Something like this would be useful for testing but in this case just an
- * interim abstraction until the servers backend is implemented in a future commit
+ * Server side backend storage (in non-demo world I would've kept the
+ * local in-memory implementation somewhere as a fake for unit testing)
  */
 function storage() {
-  const events = [];
-  const subscriptions = [];
-
   return { addEvent, subscribe };
 
   function subscribe(subscription) {
-    subscription(events);
-    subscriptions.push(subscription);
+    const remoteSubscription = new EventSource("/subscribe");
+    remoteSubscription.onmessage = (event) => {
+      subscription(JSON.parse(event.data));
+    };
   }
 
-  async function addEvent({ eventType, data }) {
-    const event = {
-      eventType,
-      data,
-      eventId: events.length,
-      eventDateCreated: new Date().toISOString(),
-    };
-    events.push(event);
-    subscriptions.forEach((subscription) => subscription([event]));
-    return {};
+  function addEvent({ eventType, data }) {
+    return fetch("/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventType,
+        data,
+      }),
+    })
+      .then((response) => response.json())
+      .catch((error) =>
+        console.error(
+          `Failed to post ${eventType} event with data `,
+          data,
+          ` due to ${error}`
+        )
+      );
   }
 }
 

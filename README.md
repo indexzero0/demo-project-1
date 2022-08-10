@@ -13,3 +13,9 @@ If the default port 8080 collides with another service, use the `PORT` environme
 ```
 PORT=<PORT> npm start
 ```
+
+## Run automated tests
+
+```
+npm test
+```
