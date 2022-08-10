@@ -275,6 +275,7 @@ class App extends React.Component {
 
     return (
       <div>
+        <h1>Discussion</h1>
         <div className="primary">
           <img className="thumbnail" src={this.state.currentUser.thumbnail} />
           <CommentForm
