@@ -42,7 +42,11 @@ class CommentForm extends React.Component {
       this.storage
         .addEvent({
           eventType: "addComment",
-          data: { from: this.props.from, body: this.state.value },
+          data: {
+            from: this.props.from,
+            body: this.state.value,
+            parentCommentId: this.props.parentCommentId || null,
+          },
         })
         .then(() => this.setState({ value: "" }))
         .finally(() => this.setState({ isAddingComment: false }));
@@ -56,12 +60,12 @@ class CommentForm extends React.Component {
         <fieldset disabled={this.state.isAddingComment}>
           <input
             type="text"
-            placeholder="What are your thoughts?"
+            placeholder={this.props.placeholder}
             className="body"
             value={this.state.value}
             onChange={this.handleChange}
           />
-          <input className="post" type="submit" value="Comment" />
+          <input className="post" type="submit" value={this.props.buttonText} />
         </fieldset>
       </form>
     );
@@ -88,6 +92,20 @@ class UpvoteButton extends React.Component {
   }
 }
 
+// "Dumb" component representing a reply button (component may be overkill here...)
+class ReplyButton extends React.Component {
+  render() {
+    return (
+      <input
+        className="reply"
+        type="button"
+        value="Reply"
+        onClick={() => this.props.handleToggle()}
+      />
+    );
+  }
+}
+
 // "Dumb" component for representing rendered comments in a discussion
 class Comment extends React.Component {
   render() {
@@ -108,7 +126,12 @@ class Comment extends React.Component {
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { comments: [], currentUsername: generateRandomUsername() };
+    this.state = {
+      comments: [],
+      currentUsername: generateRandomUsername(),
+      // List of comments ids that are displaying a reply input box
+      showReplyInput: [],
+    };
 
     /**
      * Using a basic state architecture that reduces a stream of events into comments
@@ -118,8 +141,8 @@ class App extends React.Component {
      */
     this.storage = storage();
     this.storage.subscribe((events) =>
-      this.setState((state, _props) => ({
-        comments: events.reduce(reduceEvents, [...state.comments]),
+      this.setState((prevState) => ({
+        comments: events.reduce(reduceEvents, [...prevState.comments]),
       }))
     );
   }
@@ -138,34 +161,118 @@ class App extends React.Component {
     });
   }
 
+  handleToggleReply(commentId) {
+    this.setState((prevState) => {
+      const newState = prevState.showReplyInput.includes(commentId)
+        ? prevState.showReplyInput.filter(
+            (stateCommentId) => stateCommentId !== commentId
+          )
+        : [...prevState.showReplyInput, commentId];
+
+      return {
+        showReplyInput: newState,
+      };
+    });
+  }
+
   render() {
-    const comments = this.state.comments.reduce((accumComments, comment) => {
-      return [
-        <Comment
-          key={comment.eventId}
-          body={comment.body}
-          from={comment.from}
-          created={comment.eventDateCreated}
-          upvotes={comment.upvotes}
-          toolbar={
-            <UpvoteButton
-              isUpvotedByCurrentUser={comment.upvotes.has(
-                this.state.currentUsername
-              )}
-              upvoteCount={comment.upvotes.size}
-              handleAddUpvote={() => this.handleAddUpvote(comment.eventId)}
-              handleRemoveUpvote={() =>
-                this.handleRemoveUpvote(comment.eventId)
-              }
-            />
-          }
-        />,
-        ...accumComments,
-      ];
-    }, []);
+    const comments = this.state.comments
+      .filter((comment) => !comment.parentCommentId)
+      .reduce((accumComments, comment) => {
+        const showReplyBox = this.state.showReplyInput.includes(
+          comment.eventId
+        );
+
+        /**
+         * In a non-demo/prod world I'd use a more appropriate data structure (e.g.,
+         * a graph) to avoid quadratic time complexity, which will only get worse in
+         * supporting larger depths. But for demos sake just going the brute force
+         * approach (note: brute force approach may be fine depending on context)
+         */
+        const replies = this.state.comments
+          .filter(
+            (stateComment) => stateComment.parentCommentId === comment.eventId
+          )
+          .reduce((accumReplies, reply) => {
+            const paddingLeft = 50;
+            return [
+              <div key={reply.eventId} style={{ paddingLeft }}>
+                <Comment
+                  body={reply.body}
+                  from={reply.from}
+                  created={reply.eventDateCreated}
+                  upvotes={reply.upvotes}
+                  toolbar={
+                    <span>
+                      <UpvoteButton
+                        isUpvotedByCurrentUser={reply.upvotes.has(
+                          this.state.currentUsername
+                        )}
+                        upvoteCount={reply.upvotes.size}
+                        handleAddUpvote={() =>
+                          this.handleAddUpvote(reply.eventId)
+                        }
+                        handleRemoveUpvote={() =>
+                          this.handleRemoveUpvote(reply.eventId)
+                        }
+                      />
+                    </span>
+                  }
+                ></Comment>
+              </div>,
+              ...accumReplies,
+            ];
+          }, []);
+
+        return [
+          <Comment
+            key={comment.eventId}
+            body={comment.body}
+            from={comment.from}
+            created={comment.eventDateCreated}
+            upvotes={comment.upvotes}
+            toolbar={
+              <span>
+                <UpvoteButton
+                  isUpvotedByCurrentUser={comment.upvotes.has(
+                    this.state.currentUsername
+                  )}
+                  upvoteCount={comment.upvotes.size}
+                  handleAddUpvote={() => this.handleAddUpvote(comment.eventId)}
+                  handleRemoveUpvote={() =>
+                    this.handleRemoveUpvote(comment.eventId)
+                  }
+                />
+                <input
+                  className="reply"
+                  type="button"
+                  value={showReplyBox ? "Cancel" : "Reply "}
+                  onClick={() => this.handleToggleReply(comment.eventId)}
+                />
+              </span>
+            }
+          >
+            {showReplyBox ? (
+              <CommentForm
+                from={this.state.currentUsername}
+                parentCommentId={comment.eventId}
+                placeholder="How will you reply?"
+                buttonText="Reply"
+              />
+            ) : null}
+            {replies}
+          </Comment>,
+          ...accumComments,
+        ];
+      }, []);
+
     return (
       <div>
-        <CommentForm from={this.state.currentUsername} />
+        <CommentForm
+          from={this.state.currentUsername}
+          placeholder="What are your thoughts?"
+          buttonText="Comment"
+        />
         {comments}
       </div>
     );
@@ -232,12 +339,17 @@ function reduceEvents(accumComments, event) {
   }
   return accumComments;
 
-  function addComment({ eventId, eventDateCreated, data: { from, body } }) {
+  function addComment({
+    eventId,
+    eventDateCreated,
+    data: { from, body, parentCommentId },
+  }) {
     accumComments.push({
       eventId,
       eventDateCreated,
       from,
       body,
+      parentCommentId,
       upvotes: new Set(),
     });
   }

@@ -16,7 +16,7 @@ describe("storage", function () {
     assert.deepEqual(caughtEvents, [
       {
         eventType: "fakeEvent",
-        eventId: 0,
+        eventId: 1,
         eventDateCreated: "2022-07-03T02:44:41.773Z",
         data: { hello: "world" },
       },
@@ -33,13 +33,13 @@ describe("storage", function () {
     assert.deepEqual(caughtEvents, [
       {
         eventType: "fakeEvent1",
-        eventId: 0,
+        eventId: 1,
         eventDateCreated: "2022-07-03T02:44:41.773Z",
         data: { hello: "world" },
       },
       {
         eventType: "fakeEvent2",
-        eventId: 1,
+        eventId: 2,
         eventDateCreated: "2022-07-03T02:44:41.773Z",
         data: { hello: "again" },
       },

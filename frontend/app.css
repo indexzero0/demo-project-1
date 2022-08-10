@@ -47,7 +47,7 @@ input.post:hover {
     cursor: pointer;
 }
 
-input.upvote {
+input.upvote, input.reply {
     background-color: white;
     padding: 10px 14px 10px 14px;
     border: 0;
@@ -57,7 +57,7 @@ input.upvote {
     border-radius: 5px;
 }
 
-input.upvote:hover {
+input.upvote:hover, input.reply:hover{
     background-color: #f2f2f2;
     cursor: pointer;
 }

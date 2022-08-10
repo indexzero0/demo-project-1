@@ -22,7 +22,8 @@ module.exports = function createStorageBackend() {
     const event = {
       eventType,
       data,
-      eventId: events.length,
+      // We start event ids at 1 as 0 is falsey in JS and can easily cause issues
+      eventId: events.length + 1,
       eventDateCreated: new Date().toISOString(),
     };
     events.push(event);
