@@ -9,6 +9,29 @@ body {
     margin: auto;
 }
 
+/* Primary comment box */
+
+.primary {
+    height: 50px;
+    width: 100%;
+    border-bottom: 2px solid #f1f1f1;
+    padding-bottom: 50px;
+    margin-bottom: 50px;
+}
+
+.primary .thumbnail {
+    display:inline-block;
+    height:inherit;
+    border-radius:25px;
+}
+
+.primary form {
+    display:inline-block;
+    vertical-align: middle;
+    height: inherit;
+    margin-left: 20px;
+}
+
 /* Inputs */
 
 fieldset {
@@ -69,16 +92,33 @@ input.upvote:hover, input.reply:hover{
     margin-top: 20px;
 }
 
+.comment .title {
+    height: 40px;
+}
+
+.comment .title span {
+    display: inline-block;
+    vertical-align:middle;
+    height: inherit;
+}
+
+
 .comment .title .from {
-    padding: 10px;
     font-weight: bold;
     font-size: 16px;
+    padding-left: 10px;
+
 }
 
 .comment .title .created {
     margin-left: 10px;
     font-size: 14px;
     color: rgb(56, 56, 56)
+}
+
+.comment .title .thumbnail {
+    height: inherit;
+    border-radius: 20px;
 }
 
 .comment .body {
