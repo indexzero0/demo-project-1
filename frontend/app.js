@@ -146,12 +146,18 @@ class App extends React.Component {
      * used it personally) would be better in prod but again maybe its also
      * overkill. Maybe even better to reduce on the server side...?
      */
+    const seenEventIds = new Set(); // ignore events we've already accumulated
     this.storage = storage();
-    this.storage.subscribe((events) =>
+    this.storage.subscribe((events) => {
+      const newEvents = events.filter(
+        (event) => !seenEventIds.has(event.eventId)
+      );
+      events.forEach((event) => seenEventIds.add(event.eventId));
+
       this.setState((prevState) => ({
-        comments: events.reduce(reduceEvents, [...prevState.comments]),
-      }))
-    );
+        comments: newEvents.reduce(reduceEvents, [...prevState.comments]),
+      }));
+    });
   }
 
   handleAddUpvote(commentId) {
